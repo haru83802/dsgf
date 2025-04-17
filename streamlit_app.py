@@ -31,8 +31,15 @@ def fetch_data(ticker, start_date="2010-01-01", end_date="2025-01-01"):
 # 데이터 전처리 함수
 def preprocess_data(stock_data):
     df = stock_data[['Close']].dropna()
+    
+    # 'Close' 열이 문자열인 경우를 처리 (예를 들어 'AAP' 같은 값이 있을 경우)
+    df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
+    df = df.dropna()  # Non-numeric or missing values are dropped
+    
+    # 데이터를 0과 1 사이로 스케일링
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(df.values)
+    
     return scaled_data, scaler
 
 # 시퀀스 생성 함수 (LSTM 모델에 맞게)
@@ -69,6 +76,8 @@ def predict_stock_price(model, x_test, scaler):
 # 예측 및 훈련 전체 프로세스
 def train_and_predict(ticker, data_path):
     stock_data = pd.read_csv(data_path)
+    
+    # 데이터 전처리 및 확인
     scaled_data, scaler = preprocess_data(stock_data)
 
     time_step = 60
