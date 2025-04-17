@@ -7,3 +7,7 @@ schedule
 matplotlib
 beautifulsoup4
 requests
+pandas
+lxml
+html5lib
+beautifulsoup4
