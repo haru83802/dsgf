@@ -11,3 +11,6 @@ pandas
 lxml
 html5lib
 beautifulsoup4
+textblob
+nltk
+scikit-learn
