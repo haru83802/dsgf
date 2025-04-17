@@ -6,6 +6,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
+from textblob import TextBlob
 
 # 페이지 설정
 st.set_page_config(page_title="임주혁의 글로벌 주식 예측 AI", layout="centered")
@@ -27,6 +30,26 @@ def fetch_data(ticker, start_date="2010-01-01", end_date="2025-01-01"):
         return True
     except Exception as e:
         return False
+
+# 뉴스 데이터 크롤링 함수 (예시: Yahoo Finance 뉴스)
+def get_news(ticker):
+    url = f"https://finance.yahoo.com/quote/{ticker}/news?p={ticker}"  # Yahoo Finance 뉴스 URL
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    
+    headlines = soup.find_all('h3')  # 뉴스 제목이 h3 태그에 있음
+    news_text = [headline.get_text() for headline in headlines]
+    
+    return news_text
+
+# 감성 분석 함수
+def sentiment_analysis(news_text):
+    polarity = 0
+    for text in news_text:
+        blob = TextBlob(text)
+        polarity += blob.sentiment.polarity  # 감성 분석 결과 (positive/negative)
+    
+    return polarity / len(news_text) if news_text else 0
 
 # 데이터 전처리 함수
 def preprocess_data(stock_data):
@@ -92,8 +115,10 @@ def train_and_predict(ticker, data_path):
 
     # 예측된 가격과 실제값을 데이터프레임에 추가
     predicted_price = predicted_price.flatten()
+
+    # 예측된 종가를 기존 데이터프레임에 추가
     df = stock_data.iloc[train_size + time_step:][['Close']].copy()
-    df['Predicted'] = predicted_price
+    df['Predicted'] = predicted_price  # 예측된 종가
 
     # 정확도 계산 (예측값과 실제값 비교)
     accuracy = np.mean(np.abs(predicted_price - y_test[-len(predicted_price):]) / y_test[-len(predicted_price):]) * 100
@@ -123,18 +148,22 @@ if st.button("예측 시작 🚀"):
             with st.spinner("🤖 AI 예측 중..."):
                 try:
                     df_predicted, accuracy = train_and_predict(ticker, data_path)
-                    if not df_predicted.empty:
-                        st.success(f"📈 {ticker} 예측 종가: **{df_predicted['Predicted'].iloc[-1]:.2f}**")
-                        st.write(f"모델 정확도: **{accuracy:.2f}%**")
-                        
-                        # 예측 결과와 실제 데이터를 표로 보여줌
-                        st.subheader(f"{ticker} 예측 결과")
-                        st.dataframe(df_predicted.tail(100))  # 예측된 종가와 실제 종가를 비교
+                    
+                    # 뉴스 분석 추가
+                    news_text = get_news(ticker)
+                    sentiment_score = sentiment_analysis(news_text)
+                    
+                    st.success(f"📈 {ticker} 예측 종가: **{df_predicted['Predicted'].iloc[-1]:.2f}**")
+                    st.write(f"모델 정확도: **{accuracy:.2f}%**")
+                    st.write(f"뉴스 감성 점수: **{sentiment_score:.2f}**")
 
-                        # 종가 차트
-                        st.line_chart(df_predicted[['Close', 'Predicted']].tail(200))
-                    else:
-                        st.error("❌ 예측에 실패했습니다. 모델 예측 오류.")
+                    # 예측 결과와 실제 데이터를 표로 보여줌
+                    st.subheader(f"{ticker} 예측 결과")
+                    st.dataframe(df_predicted.tail(100))  # 예측된 종가와 실제 종가를 비교
+
+                    # 종가 차트
+                    st.line_chart(df_predicted[['Close', 'Predicted']].tail(200))
+
                 except Exception as e:
                     st.error(f"❌ 예측 중 오류 발생: {str(e)}")
     else:
