@@ -115,11 +115,11 @@ def train_and_predict(ticker, data_path):
     predicted_price = predict_stock_price(model, x_test, scaler)
 
     # 예측된 가격과 실제값을 데이터프레임에 추가
-    predicted_price = predicted_price.flatten()
+    predicted_price = predicted_price.flatten()  # 2D 배열을 1D 배열로 변환
 
     # 예측된 종가를 기존 데이터프레임에 추가
     df = stock_data.iloc[train_size + time_step:].copy()  # 예측이 시작되는 시점 이후 데이터만 사용
-    df['Predicted'] = predicted_price[:len(df)]  # 예측된 종가와 길이가 맞도록 슬라이싱
+    df['Predicted'] = predicted_price[:len(df)]  # 예측된 종가와 df의 길이가 맞도록 슬라이싱
 
     # 정확도 계산 (예측값과 실제값 비교)
     accuracy = np.mean(np.abs(predicted_price[:len(df)] - y_test[-len(df):]) / y_test[-len(df):]) * 100
