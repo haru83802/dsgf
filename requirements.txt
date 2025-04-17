@@ -14,3 +14,4 @@ beautifulsoup4
 textblob
 nltk
 scikit-learn
+plotly
