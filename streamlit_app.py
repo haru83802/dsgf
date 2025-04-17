@@ -9,6 +9,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from textblob import TextBlob
+import plotly.graph_objects as go  # Plotly 추가
 
 # 페이지 설정
 st.set_page_config(page_title="임주혁의 글로벌 주식 예측 AI", layout="centered")
@@ -132,6 +133,7 @@ with st.spinner("📡 종목 목록 불러오는 중..."):
 # 종목 선택 UI
 ticker = st.selectbox("📌 예측할 종목을 선택하세요:", tickers)
 
+# 종목 예측 시작 버튼
 if st.button("예측 시작 🚀"):
     with st.spinner("📥 데이터 다운로드 중..."):
         success = fetch_data(ticker)
@@ -148,11 +150,11 @@ if st.button("예측 시작 🚀"):
             with st.spinner("🤖 AI 예측 중..."):
                 try:
                     df_predicted, accuracy = train_and_predict(ticker, data_path)
-                    
+
                     # 뉴스 분석 추가
                     news_text = get_news(ticker)
                     sentiment_score = sentiment_analysis(news_text)
-                    
+
                     st.success(f"📈 {ticker} 예측 종가: **{df_predicted['Predicted'].iloc[-1]:.2f}**")
                     st.write(f"모델 정확도: **{accuracy:.2f}%**")
                     st.write(f"뉴스 감성 점수: **{sentiment_score:.2f}**")
@@ -161,8 +163,25 @@ if st.button("예측 시작 🚀"):
                     st.subheader(f"{ticker} 예측 결과")
                     st.dataframe(df_predicted.tail(100))  # 예측된 종가와 실제 종가를 비교
 
-                    # 종가 차트
-                    st.line_chart(df_predicted[['Close', 'Predicted']].tail(200))
+                    # 종가 차트 (Plotly 사용)
+                    fig = go.Figure()
+
+                    # 실제 종가
+                    fig.add_trace(go.Scatter(x=df_predicted.index, y=df_predicted['Close'], mode='lines', name='실제 종가'))
+                    
+                    # 예측된 종가
+                    fig.add_trace(go.Scatter(x=df_predicted.index, y=df_predicted['Predicted'], mode='lines', name='예측 종가', line=dict(dash='dot')))
+
+                    fig.update_layout(title="주식 예측 결과",
+                                      xaxis_title="날짜",
+                                      yaxis_title="가격",
+                                      template="plotly_dark")
+                    st.plotly_chart(fig)  # Plotly 차트 표시
+
+                    # 상위 뉴스 5개 출력
+                    st.subheader(f"{ticker} 관련 뉴스")
+                    for i, news in enumerate(news_text[:5]):
+                        st.markdown(f"[{news}](https://finance.yahoo.com/quote/{ticker}/news?p={ticker})")
 
                 except Exception as e:
                     st.error(f"❌ 예측 중 오류 발생: {str(e)}")
