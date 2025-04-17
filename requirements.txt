@@ -1,0 +1,9 @@
+yfinance
+pandas
+numpy
+tensorflow
+scikit-learn
+schedule
+matplotlib
+beautifulsoup4
+requests
